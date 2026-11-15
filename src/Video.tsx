@@ -7,7 +7,7 @@ import {
   useVideoConfig,
 } from "remotion";
 
-export const Demo: React.FC = () => {
+export const Video: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 

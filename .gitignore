@@ -3,6 +3,7 @@ node_modules/
 
 # Build and render output
 out/
+artifacts/
 build/
 dist/
 *.tsbuildinfo

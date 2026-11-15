@@ -1,10 +1,10 @@
 {
-  "name": "remotion-demo",
+  "name": "remotion-video-template",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "remotion studio src/index.ts",
-    "build": "remotion render src/index.ts Demo out/demo.mp4"
+    "build": "remotion render src/index.ts Main out/main.mp4"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",

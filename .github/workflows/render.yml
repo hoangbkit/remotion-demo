@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - master
 
 permissions:
@@ -18,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: remotion-build-${{ github.run_id }}-${{ github.run_attempt }}
+      PROJECT_SLUG: ${{ github.event.repository.name }}
 
     steps:
       - name: Checkout
@@ -26,10 +28,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install Remotion browser
         run: npx remotion browser ensure
@@ -37,23 +40,41 @@ jobs:
       - name: Render video
         run: npm run build
 
-      - name: Stage release asset
+      - name: Stage release assets
         run: |
           set -euo pipefail
-          mkdir -p artifacts
-          cp out/demo.mp4 "artifacts/Demo-1080p-${RELEASE_TAG}.mp4"
-
-      - name: Verify release asset
-        run: |
-          set -euo pipefail
-          asset="artifacts/Demo-1080p-${RELEASE_TAG}.mp4"
-          test -s "$asset"
-          bytes=$(stat -c%s "$asset")
-          if (( bytes >= 2147483648 )); then
-            echo "error: $asset exceeds GitHub's 2 GiB release asset limit" >&2
+          shopt -s nullglob
+          videos=(out/*.mp4)
+          if (( ${#videos[@]} == 0 )); then
+            echo "error: npm run build produced no MP4 files in out/" >&2
             exit 1
           fi
-          echo "$asset: $bytes bytes"
+
+          mkdir -p artifacts
+          for video in "${videos[@]}"; do
+            name="$(basename "$video" .mp4)"
+            cp "$video" "artifacts/${PROJECT_SLUG}-${name}-${RELEASE_TAG}.mp4"
+          done
+
+      - name: Verify release assets
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(artifacts/*.mp4)
+          if (( ${#assets[@]} == 0 )); then
+            echo "error: no release videos staged" >&2
+            exit 1
+          fi
+
+          for asset in "${assets[@]}"; do
+            test -s "$asset"
+            bytes=$(stat -c%s "$asset")
+            if (( bytes >= 2147483648 )); then
+              echo "error: $asset exceeds GitHub's 2 GiB release asset limit" >&2
+              exit 1
+            fi
+            echo "$asset: $bytes bytes"
+          done
 
       - name: Create pre-release
         env:
