@@ -1,0 +1,47 @@
+
+name: Render Remotion Video
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Remotion browser
+        run: npx remotion browser ensure
+
+      - name: Render video
+        run: npm run build
+
+      - name: Install rclone
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rclone
+
+      - name: Configure Google Drive
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONFIG_BASE64 }}" \
+            | base64 -d > ~/.config/rclone/rclone.conf
+
+      - name: Upload to Google Drive
+        run: |
+          rclone copy out/demo.mp4 \
+            gdrive:RemotionExports \
+            --progress
